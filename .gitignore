@@ -1,0 +1,4 @@
+token.json
+*.bat
+__pycache__
+.vscode
