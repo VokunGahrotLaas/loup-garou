@@ -1,24 +1,11 @@
 import discord
 from discord.ext import commands
-import json_handler as json
 from re import fullmatch
 
-class Game:
-	def __init__(self, bot, name, id):
-		self.bot = bot
-		self.name = name
-		self.id = id
-		self.players = set()
-	
-	async def join(self, player):
-		if player in self.players: return
-		self.players.add(player)
-		await player.send(f"You joined '{self.name}'.")
-	
-	async def quit(self, player):
-		if player not in self.players: return
-		self.players.remove(player)
-		await player.send(f"You quitted '{self.name}'.")
+import json_handler as json
+from game import Game
+from roles import Role
+from lang import langs
 
 class GameBot(commands.Bot):
 	def __init__(self, command_prefix):
@@ -27,6 +14,9 @@ class GameBot(commands.Bot):
 		self.games = set()
 		self.from_id = {}
 		self.from_name = {}
+
+		self.guilds = set()
+		self.default_lang = langs["en"]
 
 		@self.command()
 		async def ping(ctx):
@@ -42,7 +32,7 @@ class GameBot(commands.Bot):
 
 		@self.command()
 		@commands.guild_only()
-		async def create(ctx, name):
+		async def create(ctx, name, lang= None):
 			if name in self.from_name.keys():
 				await ctx.reply("This game already exists...")
 				return
@@ -51,7 +41,7 @@ class GameBot(commands.Bot):
 				return
 			message = await ctx.reply(f"Game '{name}' has been created!\nReact to this post to join.")
 			await message.add_reaction("\N{White Heavy Check Mark}")
-			self.create_game(name, message.id)
+			self.create_game(name, message.id, lang)
 		
 		@self.command()
 		@commands.guild_only()
@@ -129,8 +119,14 @@ class GameBot(commands.Bot):
 		if isinstance(error, commands.errors.CheckFailure):
 			await ctx.send("nop")
 	
-	def create_game(self, name, id):
-			game = Game(self, name, id)
+	async def on_guild_join(self, guild):
+		pass
+	
+	async def on_guild_remove(self, guild):
+		pass
+	
+	def create_game(self, name, id, lang):
+			game = Game(self, name, id, lang)
 			self.games.add(game)
 			self.from_id[id] = game
 			self.from_name[name] = game
