@@ -51,10 +51,7 @@ class GameBot(commands.Bot):
 				return
 			message = await ctx.reply(f"Game '{name}' has been created!\nReact to this post to join.")
 			await message.add_reaction("\N{White Heavy Check Mark}")
-			game = Game(bot= self, name= name, id= message.id)
-			self.games.add(game)
-			self.from_id[message.id] = game
-			self.from_name[name] = game
+			self.create_game(name, message.id)
 		
 		@self.command()
 		@commands.guild_only()
@@ -63,10 +60,7 @@ class GameBot(commands.Bot):
 				await ctx.reply("This game does not exist...")
 				return
 			await ctx.reply(f"Game '{name}' has been deleted!")
-			game = self.from_name[name]
-			self.games.remove(game)
-			del self.from_id[game.id]
-			del self.from_name[name]
+			self.delete_game(name)
 		
 		@self.command()
 		@commands.guild_only()
@@ -134,6 +128,18 @@ class GameBot(commands.Bot):
 	async def on_command_error(self, ctx, error):
 		if isinstance(error, commands.errors.CheckFailure):
 			await ctx.send("nop")
+	
+	def create_game(self, name, id):
+			game = Game(self, name, id)
+			self.games.add(game)
+			self.from_id[id] = game
+			self.from_name[name] = game
+	
+	def delete_game(self, name):
+			game = self.from_name[name]
+			self.games.remove(game)
+			del self.from_id[game.id]
+			del self.from_name[name]
 
 def main():
 	GameBot(command_prefix= "$mj ").run(json.load("token.json"))
