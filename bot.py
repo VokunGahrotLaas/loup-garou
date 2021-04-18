@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from re import fullmatch
 from os import mkdir
-from os.path import isfile, isdir
+from os.path import exists
 
 import json_handler as json
 from game import Game
@@ -11,20 +11,18 @@ from lang import langs
 
 ROOT_FOLDER = "."
 DATA_FOLDER = ROOT_FOLDER + "/data"
-GUILDS_FILE = DATA_FOLDER + "/guilds.json"
 
 class GameBot(commands.Bot):
 	def make_files(self):
-		if not isdir(DATA_FOLDER):
+		if not exists(DATA_FOLDER):
 			mkdir(DATA_FOLDER)
-		if not isfile(GUILDS_FILE):
-			json.dump(GUILDS_FILE, {})
+		pass
 
 	def load_files(self):
-		self.guilds = json.load(GUILDS_FILE)
+		pass
 
 	def dump_files(self):
-		json.dump(GUILDS_FILE, self.guilds)
+		pass
 
 	def __init__(self, command_prefix):
 		commands.Bot.__init__(self, command_prefix= command_prefix)
@@ -33,7 +31,8 @@ class GameBot(commands.Bot):
 		self.from_id = {}
 		self.from_name = {}
 
-		self.default_lang = langs["en"]
+		self.make_files()
+		self.load_files()
 
 		@self.command()
 		async def ping(ctx):
@@ -62,7 +61,7 @@ class GameBot(commands.Bot):
 		
 		@self.command()
 		@commands.guild_only()
-		async def deleted(ctx, name):
+		async def delete(ctx, name):
 			if name not in self.from_name.keys():
 				await ctx.reply("This game does not exist...")
 				return
@@ -95,6 +94,17 @@ class GameBot(commands.Bot):
 			await game.quit(ctx.author)
 			await ctx.reply(f"You quitted '{name}'.")
 	
+	def command(self, name= None, cls= None, **attrs):
+		if "aliases" not in attrs:
+			attrs["aliases"] = []
+		def decorator(func):
+			nonlocal name, cls, attrs
+			if name is None:
+				name = func.__name__
+			attrs["aliases"] += [ lang["commands"][name] for lang in langs.values() if "commands" in lang and name in lang["commands"] and lang["commands"][name] not in attrs["aliases"] and lang["commands"][name] != name]
+			return commands.Bot.command(self, name= name, cls= cls, **attrs)(func)
+		return decorator
+
 	def run(self, token):
 		try:
 			commands.Bot.run(self, token)
@@ -143,8 +153,10 @@ class GameBot(commands.Bot):
 			await ctx.send("nop")
 	
 	async def on_guild_join(self, guild):
-		if guild not in self.guilds:
-			self.guilds.add(guild.id)
+		pass
+	
+	async def on_guild_remove(self, guild):
+		pass
 	
 	def create_game(self, name, id, lang):
 			game = Game(self, name, id, lang)
