@@ -1,13 +1,31 @@
 import discord
 from discord.ext import commands
 from re import fullmatch
+from os import mkdir
+from os.path import isfile, isdir
 
 import json_handler as json
 from game import Game
 from roles import Role
 from lang import langs
 
+ROOT_FOLDER = "."
+DATA_FOLDER = ROOT_FOLDER + "/data"
+GUILDS_FILE = DATA_FOLDER + "/guilds.json"
+
 class GameBot(commands.Bot):
+	def make_files(self):
+		if not isdir(DATA_FOLDER):
+			mkdir(DATA_FOLDER)
+		if not isfile(GUILDS_FILE):
+			json.dump(GUILDS_FILE, {})
+
+	def load_files(self):
+		self.guilds = json.load(GUILDS_FILE)
+
+	def dump_files(self):
+		json.dump(GUILDS_FILE, self.guilds)
+
 	def __init__(self, command_prefix):
 		commands.Bot.__init__(self, command_prefix= command_prefix)
 
@@ -15,7 +33,6 @@ class GameBot(commands.Bot):
 		self.from_id = {}
 		self.from_name = {}
 
-		self.guilds = set()
 		self.default_lang = langs["en"]
 
 		@self.command()
@@ -78,6 +95,12 @@ class GameBot(commands.Bot):
 			await game.quit(ctx.author)
 			await ctx.reply(f"You quitted '{name}'.")
 	
+	def run(self, token):
+		try:
+			commands.Bot.run(self, token)
+		except:
+			self.dump_files()
+	
 	async def on_ready(self):
 		print("I'm ready!")
 	
@@ -120,10 +143,8 @@ class GameBot(commands.Bot):
 			await ctx.send("nop")
 	
 	async def on_guild_join(self, guild):
-		pass
-	
-	async def on_guild_remove(self, guild):
-		pass
+		if guild not in self.guilds:
+			self.guilds.add(guild.id)
 	
 	def create_game(self, name, id, lang):
 			game = Game(self, name, id, lang)
